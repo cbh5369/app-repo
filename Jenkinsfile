@@ -1,8 +1,12 @@
-agent {
-  kubernetes {
-    yaml """
+pipeline {
+  agent {
+    kubernetes {
+      yaml """
 apiVersion: v1
 kind: Pod
+metadata:
+  labels:
+    app: kaniko-build
 spec:
   containers:
     - name: jnlp
@@ -20,15 +24,11 @@ spec:
     - name: docker-config
       emptyDir: {}
 """
-  }
-}
-"""
     }
   }
 
   environment {
     IMAGE_NAME = "testxv/myapp"
-    IMAGE_TAG  = env.BUILD_NUMBER
   }
 
   stages {
@@ -47,7 +47,7 @@ spec:
         )]) {
           sh '''
             mkdir -p /home/jenkins/agent/docker-config
-            AUTH=$(printf "%s:%s" "$DOCKER_USER" "$DOCKER_PASS" | base64 | tr -d '\n')
+            AUTH=$(printf "%s:%s" "$DOCKER_USER" "$DOCKER_PASS" | base64 | tr -d '\\n')
             cat > /home/jenkins/agent/docker-config/config.json <<EOF
 {
   "auths": {
@@ -67,10 +67,11 @@ EOF
         container('kaniko') {
           sh '''
             cp /home/jenkins/agent/docker-config/config.json /kaniko/.docker/config.json
+
             /kaniko/executor \
-              --context "${WORKSPACE}" \
-              --dockerfile "${WORKSPACE}/Dockerfile" \
-              --destination "${IMAGE_NAME}:${IMAGE_TAG}"
+              --context "$WORKSPACE" \
+              --dockerfile "$WORKSPACE/Dockerfile" \
+              --destination "$IMAGE_NAME:$BUILD_NUMBER"
           '''
         }
       }
@@ -86,15 +87,16 @@ EOF
           sh '''
             set -e
             rm -rf infra-repo
+
             git clone https://${GIT_USER}:${GIT_PASS}@github.com/sw1ber/infra-repo.git
             cd infra-repo
 
-            sed -i 's#image: .*#image: '"${IMAGE_NAME}:${IMAGE_TAG}"'#' k8s/deployment.yaml
+            sed -i "s#image: .*#image: ${IMAGE_NAME}:${BUILD_NUMBER}#" k8s/deployment.yaml
 
             git config user.name "jenkins"
             git config user.email "jenkins@local"
             git add k8s/deployment.yaml
-            git commit -m "update image to ${IMAGE_NAME}:${IMAGE_TAG}" || true
+            git commit -m "update image to ${IMAGE_NAME}:${BUILD_NUMBER}" || true
             git push origin main
           '''
         }

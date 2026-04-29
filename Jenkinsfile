@@ -88,7 +88,7 @@ EOF
             set -e
             rm -rf infra-repo
 
-            git clone https://${GIT_USER}:${GIT_PASS}@github.com/sw1ber/infra-repo.git
+            git clone https://${GIT_USER}:${GIT_PASS}@github.com/cbh5369/infra-repo.git
             cd infra-repo
 
             sed -i "s#image: .*#image: ${IMAGE_NAME}:${BUILD_NUMBER}#" k8s/deployment.yaml

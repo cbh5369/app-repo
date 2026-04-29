@@ -28,7 +28,7 @@ spec:
 
   environment {
     IMAGE_NAME = "testxv/myapp"
-    IMAGE_TAG  = "${env.BUILD_NUMBER}"
+    IMAGE_TAG  = env.BUILD_NUMBER
   }
 
   stages {
